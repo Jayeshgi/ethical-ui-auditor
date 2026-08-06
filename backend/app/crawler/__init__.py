@@ -1,0 +1,1 @@
+"""Playwright capture layer."""

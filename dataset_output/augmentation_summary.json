@@ -1,0 +1,50 @@
+{
+  "source_file": "C:\\Users\\erjay\\Downloads\\darkpatterndataset.csv",
+  "output_file": "C:\\Major project\\dataset_output\\darkpatterndataset_augmented.csv",
+  "seed": 20260807,
+  "source_row_count": 2356,
+  "exact_or_normalized_duplicates_removed": 198,
+  "normalized_original_row_count": 2158,
+  "synthetic_row_count": 1600,
+  "final_row_count": 3758,
+  "target_per_dark_category": 250,
+  "counts_before_synthetic": {
+    "confirm_shaming": 94,
+    "false_scarcity": 293,
+    "false_urgency": 200,
+    "forced_consent": 4,
+    "misleading_claim": 63,
+    "neutral": 1156,
+    "obstruction": 27,
+    "sneaking": 12,
+    "social_proof": 309
+  },
+  "synthetic_added_by_category": {
+    "confirm_shaming": 156,
+    "false_urgency": 50,
+    "fear_or_pressure": 250,
+    "forced_consent": 246,
+    "misleading_claim": 187,
+    "obstruction": 223,
+    "sneaking": 238,
+    "subscription_manipulation": 250
+  },
+  "final_counts": {
+    "confirm_shaming": 250,
+    "false_scarcity": 293,
+    "false_urgency": 250,
+    "fear_or_pressure": 250,
+    "forced_consent": 250,
+    "misleading_claim": 250,
+    "neutral": 1156,
+    "obstruction": 250,
+    "sneaking": 250,
+    "social_proof": 309,
+    "subscription_manipulation": 250
+  },
+  "policy": {
+    "synthetic_review_status": "pending_review",
+    "synthetic_split_eligibility": "train_only",
+    "original_file_modified": false
+  }
+}
