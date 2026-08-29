@@ -1,0 +1,192 @@
+{
+  "$defs": {
+    "AutonomousCredentials": {
+      "description": "Ephemeral credentials. Secret values must never enter persistence.",
+      "properties": {
+        "username": {
+          "format": "password",
+          "maxLength": 320,
+          "minLength": 1,
+          "title": "Username",
+          "type": "string",
+          "writeOnly": true
+        },
+        "password": {
+          "format": "password",
+          "maxLength": 1024,
+          "minLength": 1,
+          "title": "Password",
+          "type": "string",
+          "writeOnly": true
+        },
+        "login_url": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Login Url"
+        },
+        "one_time_code": {
+          "anyOf": [
+            {
+              "format": "password",
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string",
+              "writeOnly": true
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "One Time Code"
+        }
+      },
+      "required": [
+        "username",
+        "password"
+      ],
+      "title": "AutonomousCredentials",
+      "type": "object"
+    },
+    "AutonomousPolicy": {
+      "properties": {
+        "max_states": {
+          "default": 30,
+          "maximum": 60,
+          "minimum": 5,
+          "title": "Max States",
+          "type": "integer"
+        },
+        "max_depth": {
+          "default": 6,
+          "maximum": 10,
+          "minimum": 1,
+          "title": "Max Depth",
+          "type": "integer"
+        },
+        "max_actions": {
+          "default": 50,
+          "maximum": 120,
+          "minimum": 5,
+          "title": "Max Actions",
+          "type": "integer"
+        },
+        "max_runtime_seconds": {
+          "default": 180,
+          "maximum": 600,
+          "minimum": 30,
+          "title": "Max Runtime Seconds",
+          "type": "integer"
+        },
+        "max_candidates_per_state": {
+          "default": 8,
+          "maximum": 15,
+          "minimum": 1,
+          "title": "Max Candidates Per State",
+          "type": "integer"
+        },
+        "replay_attempts": {
+          "default": 2,
+          "maximum": 3,
+          "minimum": 1,
+          "title": "Replay Attempts",
+          "type": "integer"
+        },
+        "behavior_observation_seconds": {
+          "default": 30,
+          "maximum": 90,
+          "minimum": 5,
+          "title": "Behavior Observation Seconds",
+          "type": "integer"
+        }
+      },
+      "title": "AutonomousPolicy",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "url": {
+      "format": "uri",
+      "minLength": 1,
+      "title": "Url",
+      "type": "string"
+    },
+    "mode": {
+      "default": "evidence_only",
+      "enum": [
+        "controlled",
+        "evidence_only"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "goal_families": {
+      "items": {
+        "enum": [
+          "auto",
+          "account_create_delete",
+          "subscribe_cancel",
+          "newsletter_subscribe_unsubscribe",
+          "consent_grant_withdraw",
+          "notifications_enable_disable",
+          "integration_connect_disconnect",
+          "payment_method_add_remove",
+          "loyalty_join_leave",
+          "data_share_revoke",
+          "purchase_return"
+        ],
+        "type": "string"
+      },
+      "maxItems": 10,
+      "minItems": 1,
+      "title": "Goal Families",
+      "type": "array"
+    },
+    "credentials": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AutonomousCredentials"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "allowed_origins": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 10,
+      "title": "Allowed Origins",
+      "type": "array"
+    },
+    "policy": {
+      "$ref": "#/$defs/AutonomousPolicy"
+    },
+    "analyse_models": {
+      "default": true,
+      "title": "Analyse Models",
+      "type": "boolean"
+    },
+    "analyse_behavior": {
+      "default": true,
+      "title": "Analyse Behavior",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "url"
+  ],
+  "title": "AutonomousFlowRequest",
+  "type": "object"
+}

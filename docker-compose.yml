@@ -1,0 +1,42 @@
+services:
+  database:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ethical_ui_auditor
+      POSTGRES_USER: auditor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auditor -d ethical_ui_auditor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg://auditor:${POSTGRES_PASSWORD}@database:5432/ethical_ui_auditor
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
+      VISUAL_MODEL_PATH: /app/model_artifacts/dark_pattern_yolo_v2/best.pt
+    volumes:
+      - ./model_artifacts:/app/model_artifacts:ro
+      - runtime_data:/app/runtime_data
+    ports:
+      - "8000:8000"
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    init: true
+    shm_size: 1gb
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  runtime_data:

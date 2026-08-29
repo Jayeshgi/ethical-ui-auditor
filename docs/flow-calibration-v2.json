@@ -1,0 +1,52 @@
+{
+  "calibration_version": "flow-obstruction-provisional-v2",
+  "captured_at": "2026-08-14T01:04:00+05:30",
+  "review_status": "pending_human_review",
+  "note": "Automated smoke controls validate behavior but do not measure model accuracy.",
+  "runs": [
+    {
+      "run_id": "flow-1ed812a1263c",
+      "source": "local_benchmark",
+      "case": "fair",
+      "acquisition_effort": 1.51,
+      "exit_effort": 1.51,
+      "score": 0.0,
+      "candidate": false,
+      "expected_candidate": false,
+      "passed": true,
+      "evidence": []
+    },
+    {
+      "run_id": "flow-b9e92ca59818",
+      "source": "local_benchmark",
+      "case": "obstructed",
+      "acquisition_effort": 1.51,
+      "exit_effort": 23.58,
+      "score": 100.0,
+      "candidate": true,
+      "expected_candidate": true,
+      "passed": true,
+      "evidence": [
+        "forced_reason",
+        "hidden_exit_control",
+        "retention_interstitial",
+        "repeated_confirmation"
+      ]
+    },
+    {
+      "run_id": "flow-97b3738eee40",
+      "source": "automation_exercise",
+      "case": "public_disposable_account_lifecycle",
+      "acquisition_steps": 21,
+      "exit_steps": 3,
+      "acquisition_effort": 28.79,
+      "exit_effort": 3.11,
+      "score": 0.0,
+      "candidate": false,
+      "expected_candidate": false,
+      "passed": true,
+      "evidence": [],
+      "cleanup_warnings": []
+    }
+  ]
+}

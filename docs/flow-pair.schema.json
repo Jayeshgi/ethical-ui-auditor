@@ -1,0 +1,177 @@
+{
+  "$defs": {
+    "FlowActionSpec": {
+      "properties": {
+        "action": {
+          "enum": [
+            "goto",
+            "click",
+            "fill",
+            "select",
+            "check",
+            "wait_for",
+            "assert_text"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "selector": {
+          "anyOf": [
+            {
+              "maxLength": 1000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selector"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "description": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "commit": {
+          "default": false,
+          "title": "Commit",
+          "type": "boolean"
+        },
+        "timeout_ms": {
+          "default": 15000,
+          "maximum": 60000,
+          "minimum": 500,
+          "title": "Timeout Ms",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action",
+        "description"
+      ],
+      "title": "FlowActionSpec",
+      "type": "object"
+    },
+    "FlowDefinitionSpec": {
+      "properties": {
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "goal": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Goal",
+          "type": "string"
+        },
+        "start_url": {
+          "anyOf": [
+            {
+              "maxLength": 2000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Url"
+        },
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/FlowActionSpec"
+          },
+          "maxItems": 60,
+          "minItems": 1,
+          "title": "Actions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name",
+        "goal",
+        "actions"
+      ],
+      "title": "FlowDefinitionSpec",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "name": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "source": {
+      "default": "custom",
+      "enum": [
+        "custom",
+        "automation_exercise",
+        "local_benchmark"
+      ],
+      "title": "Source",
+      "type": "string"
+    },
+    "mode": {
+      "default": "evidence_only",
+      "enum": [
+        "controlled",
+        "evidence_only"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "acquisition": {
+      "$ref": "#/$defs/FlowDefinitionSpec"
+    },
+    "exit": {
+      "$ref": "#/$defs/FlowDefinitionSpec"
+    },
+    "cleanup_actions": {
+      "items": {
+        "$ref": "#/$defs/FlowActionSpec"
+      },
+      "maxItems": 20,
+      "title": "Cleanup Actions",
+      "type": "array"
+    },
+    "allowed_origins": {
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 10,
+      "title": "Allowed Origins",
+      "type": "array"
+    },
+    "analyse_models": {
+      "default": true,
+      "title": "Analyse Models",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "name",
+    "acquisition",
+    "exit"
+  ],
+  "title": "FlowPairRequest",
+  "type": "object"
+}

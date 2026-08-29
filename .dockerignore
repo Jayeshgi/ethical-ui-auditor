@@ -1,0 +1,13 @@
+.git
+.venv
+.pytest_cache
+.playwright-browsers
+.aidui-review
+data
+model_artifacts
+runtime_data
+runs
+dataset_output
+__pycache__
+*.pyc
+*.pt
