@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="DealCart controlled technology-store benchmark for ethical interface research.">
+  <title>DealCart Research Store</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="research-banner" role="note">
+    Synthetic research benchmark — no real products, payments, accounts or subscriptions.
+  </div>
+  <header class="site-header">
+    <a class="brand" href="/manipulative" data-app-link="/manipulative" aria-label="DealCart home">
+      <span class="brand-mark" aria-hidden="true">D</span>
+      <span>DealCart</span>
+      <small>Research Store</small>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="/manipulative" data-app-link="/manipulative">Store</a>
+      <a href="/products" data-app-link="/products">Products</a>
+      <a href="/cart" data-app-link="/cart">Cart <span id="cart-count" class="count">0</span></a>
+      <a href="/flows/account" data-app-link="/flows/account">Account</a>
+    </nav>
+    <span id="variant-badge" class="variant-badge">Loading</span>
+  </header>
+
+  <main id="app" tabindex="-1" aria-live="polite">
+    <section class="loading-card">
+      <h1>Loading DealCart benchmark…</h1>
+      <p>The local deterministic test application is starting.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>DealCart is fictional research software. Results are evidence signals, not legal conclusions.</p>
+    <a href="/lab" data-app-link="/lab">Benchmark control centre</a>
+  </footer>
+
+  <div id="modal-root"></div>
+  <div id="toast-root" aria-live="assertive" aria-atomic="true"></div>
+  <script src="/js/products-data.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/flows.js"></script>
+  <script src="/js/scenarios.js"></script>
+  <script src="/js/bootstrap.js"></script>
+</body>
+</html>

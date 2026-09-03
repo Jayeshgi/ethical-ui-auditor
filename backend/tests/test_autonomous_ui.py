@@ -22,6 +22,8 @@ def test_autonomous_workspace_targets_the_documented_async_apis() -> None:
     assert "/api/v1/autonomous-flow-runs/${currentRun}" in page
     assert "/api/v1/autonomous-flow-review-queue" in page
     assert "/api/v1/autonomous-flow-comparisons" in page
+    assert 'id="downloadPdfButton"' in page
+    assert "/report.pdf" in page
     assert "/api/v1/autonomous-findings/${box.dataset.finding}/review" in page
     assert "/screenshots/${encodeURIComponent(filename)}" in page
 
@@ -35,6 +37,9 @@ def test_autonomous_workspace_exposes_evidence_and_regression_views() -> None:
     assert "Supporting models" in page
     assert "Controlled benchmarks and manual paired definitions" in page
     assert "Dynamic frontend behaviour" in page
+    assert "Full website audit" in page
+    assert "Maximum pages" in page
+    assert "Whole-site crawl coverage" in page
     assert "Dynamic frontend research controls" in page
     assert "/behavior-benchmarks/genuine-countdown" in page
     assert "/behavior-benchmarks/fake-countdown" in page

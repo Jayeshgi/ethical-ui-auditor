@@ -29,7 +29,7 @@ from app.flow_analysis.autonomous_schemas import (
 )
 
 
-AUTONOMOUS_PIPELINE_VERSION = "autonomous-flow-and-runtime-v2"
+AUTONOMOUS_PIPELINE_VERSION = "autonomous-site-audit-v3"
 
 
 class AutonomousFlowJobNotFoundError(KeyError):
@@ -394,6 +394,7 @@ class PersistentAutonomousFlowJobManager:
             raise AutonomousFlowJobConflictError("This job is not waiting for credentials or verification input.")
         request = AutonomousFlowRequest(
             url=job.request.url,
+            scope=job.request.scope,
             mode=job.request.mode,
             goal_families=job.request.goal_families,
             credentials=credentials,

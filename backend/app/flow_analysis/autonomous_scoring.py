@@ -8,7 +8,7 @@ from app.flow_analysis.autonomous_schemas import (
 from app.flow_analysis.mechanisms import mechanism_weight
 
 
-AUTONOMOUS_PIPELINE_VERSION = "autonomous-flow-and-runtime-v2"
+AUTONOMOUS_PIPELINE_VERSION = "autonomous-site-audit-v3"
 
 
 def roach_motel_finding(

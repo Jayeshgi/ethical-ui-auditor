@@ -9,6 +9,7 @@ from pydantic import AnyHttpUrl, BaseModel, Field, SecretStr, field_validator, m
 
 from app.frontend_analysis.schemas import FrontendBehaviorReport
 from app.flow_analysis.schemas import FlowMetrics, FlowMode, FlowStepResult, TargetPresentation
+from app.schemas import Finding, FusionLink, VisualCue
 
 
 _SENSITIVE_QUERY_KEY = re.compile(
@@ -146,6 +147,7 @@ AutomationStage = Literal[
     "queued",
     "validating",
     "static_scan",
+    "site_crawl",
     "runtime_analysis",
     "discovering_acquisition",
     "establishing_session",
@@ -158,6 +160,7 @@ AutomationStage = Literal[
     "failed",
     "cancelled",
 ]
+AnalysisScope = Literal["single_page", "full_site"]
 AutomationOutcome = Literal["candidate", "not_detected", "inconclusive", "needs_assistance"]
 PublicationGate = Literal["auto_report", "report_with_caution", "inconclusive"]
 FindingStatus = Literal["detected", "suspicious", "not_detected", "inconclusive"]
@@ -188,10 +191,13 @@ class AutonomousPolicy(BaseModel):
     max_candidates_per_state: int = Field(default=8, ge=1, le=15)
     replay_attempts: int = Field(default=2, ge=1, le=3)
     behavior_observation_seconds: int = Field(default=30, ge=5, le=90)
+    max_pages: int = Field(default=60, ge=1, le=60)
+    crawl_depth: int = Field(default=4, ge=0, le=8)
 
 
 class AutonomousFlowRequest(BaseModel):
     url: AnyHttpUrl
+    scope: AnalysisScope = "single_page"
     mode: FlowMode = "evidence_only"
     goal_families: list[GoalFamilyRequest] = Field(default_factory=lambda: ["auto"], min_length=1, max_length=10)
     credentials: AutonomousCredentials | None = None
@@ -223,6 +229,7 @@ class AutonomousFlowRequestSummary(BaseModel):
     """Safe representation returned by the API and stored in PostgreSQL."""
 
     url: str
+    scope: AnalysisScope = "single_page"
     mode: FlowMode
     goal_families: list[GoalFamilyRequest]
     allowed_origins: list[str]
@@ -235,6 +242,7 @@ class AutonomousFlowRequestSummary(BaseModel):
     def from_request(cls, request: AutonomousFlowRequest) -> "AutonomousFlowRequestSummary":
         return cls(
             url=str(request.url),
+            scope=request.scope,
             mode=request.mode,
             goal_families=request.goal_families,
             allowed_origins=request.allowed_origins,
@@ -384,6 +392,40 @@ class AutonomousRunSummary(BaseModel):
     requires_assistance: bool = False
     behavioral_detected: int = Field(default=0, ge=0)
     behavioral_suspicious: int = Field(default=0, ge=0)
+    pages_discovered: int = Field(default=0, ge=0)
+    pages_scanned: int = Field(default=0, ge=0)
+    pages_failed: int = Field(default=0, ge=0)
+
+
+class SitePageAnalysis(BaseModel):
+    url: str
+    title: str = ""
+    depth: int = Field(default=0, ge=0)
+    discovered_from: str | None = None
+    status: Literal["scanned", "failed", "skipped"]
+    screenshot_path: str | None = None
+    text_blocks_analyzed: int = Field(default=0, ge=0)
+    text_findings: list[Finding] = Field(default_factory=list)
+    visual_cues: list[VisualCue] = Field(default_factory=list)
+    fusion_links: list[FusionLink] = Field(default_factory=list)
+    frontend_behavior: FrontendBehaviorReport = Field(default_factory=FrontendBehaviorReport)
+    discovered_goal_families: list[GoalFamily] = Field(default_factory=list)
+    error: str | None = None
+
+
+class SiteCrawlReport(BaseModel):
+    status: Literal["not_requested", "completed", "completed_with_warnings"] = "not_requested"
+    start_url: str = ""
+    origin: str = ""
+    pages_discovered: int = Field(default=0, ge=0)
+    pages_scanned: int = Field(default=0, ge=0)
+    pages_failed: int = Field(default=0, ge=0)
+    max_pages_reached: bool = False
+    max_depth_reached: bool = False
+    coverage_complete: bool = False
+    category_counts: dict[str, int] = Field(default_factory=dict)
+    pages: list[SitePageAnalysis] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class ModelPipelineStatus(BaseModel):
@@ -402,6 +444,7 @@ class AutonomousFlowResult(BaseModel):
     limitations: list[AutomationLimitation] = Field(default_factory=list)
     model_status: ModelPipelineStatus
     frontend_behavior: FrontendBehaviorReport = Field(default_factory=FrontendBehaviorReport)
+    site_audit: SiteCrawlReport = Field(default_factory=SiteCrawlReport)
     warnings: list[str] = Field(default_factory=list)
 
 

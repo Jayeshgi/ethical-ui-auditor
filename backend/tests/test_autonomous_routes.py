@@ -35,6 +35,8 @@ from app.flow_analysis.autonomous_schemas import (
     StateGraph,
 )
 from app.flow_analysis.schemas import FlowMetrics
+from app.flow_analysis import pdf_report
+from app.flow_analysis.pdf_report import build_report_html
 from app.schemas import UserPublic
 
 
@@ -307,6 +309,59 @@ async def test_screenshot_is_served_only_from_owned_run_directory(monkeypatch, t
 
     assert response.path == screenshot.resolve()
     assert response.media_type == "image/png"
+
+
+def test_pdf_report_html_escapes_dynamic_content() -> None:
+    result = _result("auto-report").model_copy(update={"url": "https://example.com/<script>alert(1)</script>"})
+    finding = result.goals[0].overall_finding.model_copy(update={"rationale": "<img src=x onerror=alert(1)>"})
+    result.goals[0].overall_finding = finding
+
+    document = build_report_html(result)
+
+    assert "FlowLens evidence report" in document
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in document
+    assert "&lt;img src=x onerror=alert(1)&gt;" in document
+    assert "<script>alert(1)</script>" not in document
+
+
+def test_pdf_embeds_only_run_owned_png_evidence(monkeypatch, tmp_path) -> None:
+    runtime = tmp_path / "runtime"
+    run_directory = runtime / "autonomous_flow_runs" / "auto-report"
+    run_directory.mkdir(parents=True)
+    (run_directory / "inside.png").write_bytes(b"\x89PNG\r\n\x1a\nfixture")
+    (runtime / "outside.png").write_bytes(b"\x89PNG\r\n\x1a\noutside")
+    monkeypatch.setattr(pdf_report, "RUNTIME_DATA_DIR", runtime)
+
+    embedded = pdf_report._evidence_image("C:/untrusted/path/inside.png", "auto-report")
+
+    assert "data:image/png;base64," in embedded
+    assert "inside.png" in embedded
+    assert pdf_report._evidence_image("../outside.png", "auto-report") == ""
+    assert pdf_report._evidence_image("inside.jpg", "auto-report") == ""
+
+
+@pytest.mark.asyncio
+async def test_pdf_report_download_is_owner_scoped(monkeypatch) -> None:
+    result = _result("auto-report")
+
+    class FakeManager:
+        async def get(self, run_id, user_id):
+            assert (run_id, user_id) == ("auto-report", "user-1")
+            return _job(run_id, result)
+
+    async def fake_renderer(value):
+        assert value is result
+        return b"%PDF-1.7\nbenchmark"
+
+    monkeypatch.setattr(autonomous_routes, "autonomous_flow_job_manager", FakeManager())
+    monkeypatch.setattr(autonomous_routes, "render_report_pdf", fake_renderer)
+    user = UserPublic(id="user-1", email="one@example.com", role="reviewer", created_at=datetime.now(UTC))
+
+    response = await autonomous_routes.download_autonomous_flow_report("auto-report", user)
+
+    assert response.body.startswith(b"%PDF-1.7")
+    assert response.media_type == "application/pdf"
+    assert response.headers["content-disposition"] == 'attachment; filename="flowlens-auto-report.pdf"'
 
 
 @pytest.mark.asyncio

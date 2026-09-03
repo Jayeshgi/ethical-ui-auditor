@@ -7,3 +7,16 @@ runtime_data/
 artifacts/
 model_artifacts/
 .playwright-browsers/
+.aidui-review/
+runs/
+dataset_output/
+yolo*.pt
+benchmarks/dealcart/node_modules/
+benchmarks/dealcart/test-results/
+benchmarks/dealcart/playwright-report/
+
+# Downloaded and generated training data stay local.
+data/external_sources/
+data/annotation_queue/
+data/visual_dataset/
+data/visual_dataset_pseudo_v2/

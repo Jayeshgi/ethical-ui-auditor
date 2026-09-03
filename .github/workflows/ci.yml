@@ -29,6 +29,20 @@ jobs:
           DATABASE_URL: sqlite:///${{ github.workspace }}/runtime_data/ci.db
         run: pytest backend/tests -q
 
+  dealcart:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Compile benchmark JavaScript
+        working-directory: benchmarks/dealcart
+        run: npm run check
+      - name: Test benchmark server and state model
+        working-directory: benchmarks/dealcart
+        run: npm test
+
   container:
     runs-on: ubuntu-latest
     steps:

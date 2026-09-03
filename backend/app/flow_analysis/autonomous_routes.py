@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
@@ -36,6 +36,7 @@ from app.flow_analysis.autonomous_schemas import (
     FlowComparisonResult,
     StateGraph,
 )
+from app.flow_analysis.pdf_report import render_report_pdf
 from app.flow_analysis.regression import compare_autonomous_results
 from app.schemas import UserPublic
 
@@ -132,6 +133,25 @@ async def list_autonomous_flow_findings(
         .order_by(AutonomousFindingRecord.goal_id, AutonomousFindingRecord.category, AutonomousFindingRecord.id)
     ).all()
     return [_finding_response(record) for record in records]
+
+
+@router.get("/autonomous-flow-runs/{run_id}/report.pdf")
+async def download_autonomous_flow_report(
+    run_id: str,
+    user: UserPublic = Depends(get_current_user),
+) -> Response:
+    """Create an owner-scoped PDF from the persisted autonomous result."""
+
+    result = _completed_result(await _owned_job(run_id, user.id))
+    document = await render_report_pdf(result)
+    safe_name = "".join(
+        character for character in run_id if character.isalnum() or character in "-_"
+    )
+    return Response(
+        content=document,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="flowlens-{safe_name or "report"}.pdf"'},
+    )
 
 
 @router.get("/autonomous-flow-runs/{run_id}/screenshots/{filename}")

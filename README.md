@@ -5,19 +5,26 @@ Developer-facing proof of concept for detecting candidate dark-pattern language 
 Current pipeline:
 
 ```text
-URL -> Playwright capture -> screenshot + visible DOM text -> OCR -> fusion -> BERT analysis -> evidence phrases -> JSON
+URL -> safe Playwright capture and state graph
+    -> OCR + BERT text evidence
+    -> YOLO visual evidence
+    -> DOM/CSS + runtime behavior evidence
+    -> paired-flow effort and confidence fusion
+    -> PostgreSQL history -> web result + PDF report
 ```
 
 The current milestone includes Playwright, OCR, BERT-based text analysis, YOLO
 v2 visual-cue detection, taxonomy-safe spatial evidence fusion, persistent
 asynchronous scan jobs, and an autonomous paired-flow analyzer. The flow
-analyzer discovers acquisition and exit goals from a URL, builds a page-state
-graph, applies risk-bounded traversal, replays stable paths, and stores
+analyzer can either inspect one journey or crawl an entire same-origin website.
+The full-site mode records URL coverage and per-page failures, runs static and
+runtime evidence analysis on each captured page, discovers acquisition and exit
+goals across the site, builds page-state graphs with per-journey budgets, and stores
 confidence-gated findings and regression comparisons. A separate dynamic
 frontend engine observes timers, defaults, visual hierarchy, repeated dialogs,
 scarcity/social-proof claims, and subscription disclosures across time, reload,
-and clean browser sessions. Report/PDF export is not
-yet included.
+and clean browser sessions. Completed autonomous runs can be downloaded as
+self-contained PDF evidence reports.
 
 ## Text-classification model
 
@@ -29,7 +36,7 @@ The scan endpoint intentionally returns HTTP 503 until a trained, validated mode
 
 The repository includes the original and augmented datasets plus the training code. Generated local files (the Python environment, browser binaries, screenshots, scan data, and model artifacts) are intentionally not versioned.
 
-1. Install Python 3.11+, PostgreSQL 17, Tesseract OCR, and Git.
+1. Install Python 3.11+, PostgreSQL 17, Tesseract OCR, Git, and Node.js 20+.
 2. Create and activate the local environment:
 
 ```powershell
@@ -75,6 +82,23 @@ workspace, run history, state graphs, review queue, and regression comparisons.
 The same workspace includes genuine, resetting-countdown, and multi-pattern
 frontend research controls. See `docs/dynamic-frontend-analysis.md` for its
 evidence model and interpretation limits.
+
+For the full safe product demonstration, start the DealCart controlled store in
+a second PowerShell window:
+
+```powershell
+Set-Location 'C:\Major project\benchmarks\dealcart'
+npm start
+```
+
+Open `http://127.0.0.1:3000/lab` to browse every benchmark case. For one
+consolidated audit, submit `http://127.0.0.1:3000/`, select **Full website
+audit** and **Controlled test target**, and leave the optional credentials
+empty. The default 60-page, depth-4 budget covers the current 49-page DealCart
+link graph. Use the **Download complete PDF report** button after the run
+completes. The complete route,
+flow, test, and presentation specification is in
+`docs/dealcart-benchmark.md`.
 
 Native PostgreSQL is the local default. Docker PostgreSQL remains optional for
 reproducible team/deployment runs. See `docs/database-workflow.md` for the data

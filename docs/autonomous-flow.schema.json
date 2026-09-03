@@ -107,6 +107,20 @@
           "minimum": 5,
           "title": "Behavior Observation Seconds",
           "type": "integer"
+        },
+        "max_pages": {
+          "default": 60,
+          "maximum": 60,
+          "minimum": 1,
+          "title": "Max Pages",
+          "type": "integer"
+        },
+        "crawl_depth": {
+          "default": 4,
+          "maximum": 8,
+          "minimum": 0,
+          "title": "Crawl Depth",
+          "type": "integer"
         }
       },
       "title": "AutonomousPolicy",
@@ -118,6 +132,15 @@
       "format": "uri",
       "minLength": 1,
       "title": "Url",
+      "type": "string"
+    },
+    "scope": {
+      "default": "single_page",
+      "enum": [
+        "single_page",
+        "full_site"
+      ],
+      "title": "Scope",
       "type": "string"
     },
     "mode": {

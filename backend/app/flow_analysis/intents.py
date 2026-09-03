@@ -123,6 +123,7 @@ GOAL_TAXONOMY: dict[GoalFamily, GoalIntentTaxonomy] = {
         family="newsletter_subscribe_unsubscribe",
         opposites=(
             ("subscribe to newsletter", "unsubscribe"),
+            ("join newsletter", "leave newsletter"),
             ("get email updates", "stop email updates"),
             ("join mailing list", "leave mailing list"),
             ("sign up for emails", "opt out of emails"),
@@ -139,7 +140,7 @@ GOAL_TAXONOMY: dict[GoalFamily, GoalIntentTaxonomy] = {
             "email preferences",
             "communications preferences",
         ),
-        contextual_acquisition_terms=("subscribe", "sign up"),
+        contextual_acquisition_terms=("subscribe", "sign up", "join"),
         contextual_exit_terms=("opt out", "stop"),
         object_noise=("marketing", "promotional", "communication", "communications"),
     ),
@@ -750,4 +751,3 @@ def pair_goal_candidates(
             pair.exit.control.control_id,
         ),
     )
-

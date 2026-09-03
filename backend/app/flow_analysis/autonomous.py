@@ -31,6 +31,7 @@ from app.flow_analysis.autonomous_schemas import (
     GraphNode,
     ModelPipelineStatus,
     ObservedControl,
+    SiteCrawlReport,
     StateGraph,
 )
 from app.flow_analysis.confidence import build_confidence_breakdown
@@ -49,6 +50,7 @@ from app.flow_analysis.risk import action_allowed, classify_action_risk, request
 from app.flow_analysis.schemas import FlowMetrics, FlowStepEvidence, FlowStepResult
 from app.flow_analysis.scoring import JUSTIFIED_WEIGHTS, OBSTRUCTION_WEIGHTS
 from app.flow_analysis.selectors import build_selector_bundle, resolve_selector
+from app.flow_analysis.site_crawler import crawl_site
 from app.flow_analysis.state_graph import StateGraphBuilder, detect_dead_ends, detect_redirect_loops
 
 
@@ -1252,11 +1254,50 @@ async def perform_autonomous_analysis(
     builder = StateGraphBuilder()
     all_limitations: list[AutomationLimitation] = []
     goals: list[GoalPairAnalysis] = []
+    site_audit = SiteCrawlReport()
+    goal_entry_urls: dict[GoalFamily, str] = {}
 
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=True)
         frontend_behavior = FrontendBehaviorReport()
-        if request.analyse_behavior:
+        if request.scope == "full_site":
+            await _progress(progress_callback, "site_crawl", 14)
+            await _ensure_not_cancelled(cancellation_callback)
+
+            async def site_context_factory() -> BrowserContext:
+                return await _configure_context(browser, request, allowed_origins)
+
+            async def site_progress(completed: int, discovered: int) -> None:
+                denominator = max(request.policy.max_pages, discovered, 1)
+                value = 14 + min(31, int(completed / denominator * 31))
+                await _progress(progress_callback, "site_crawl", value)
+
+            try:
+                crawl = await crawl_site(
+                    browser,
+                    request,
+                    site_context_factory,
+                    run_directory,
+                    cancellation_callback=cancellation_callback,
+                    progress_callback=site_progress,
+                )
+                site_audit = crawl.report
+                goal_entry_urls = crawl.goal_entry_urls
+                frontend_behavior = crawl.behavior
+                warnings.extend(site_audit.warnings)
+            except Exception as error:
+                warnings.append(
+                    f"Full-site crawl could not complete: {type(error).__name__}. "
+                    "The paired-flow analyzer continued from the supplied URL."
+                )
+                site_audit = SiteCrawlReport(
+                    status="completed_with_warnings",
+                    start_url=str(request.url),
+                    origin=_origin(str(request.url)),
+                    pages_failed=1,
+                    warnings=[warnings[-1]],
+                )
+        elif request.analyse_behavior:
             await _progress(progress_callback, "runtime_analysis", 15)
             await _ensure_not_cancelled(cancellation_callback)
 
@@ -1273,21 +1314,25 @@ async def perform_autonomous_analysis(
                 sensitive_values=_request_redaction_values(request),
             )
             warnings.extend(frontend_behavior.warnings)
-        discovery_context = await _configure_context(browser, request, allowed_origins)
-        discovery_page = await discovery_context.new_page()
-        try:
-            await _progress(progress_callback, "discovering_acquisition", 20)
-            families = await _discover_families(
-                discovery_page,
-                request,
-                builder,
-                run_directory,
-                sequence,
-                allowed_origins,
-                all_limitations,
-            )
-        finally:
-            await discovery_context.close()
+        explicit_families = [value for value in request.goal_families if value != "auto"]
+        if request.scope == "full_site" and (goal_entry_urls or explicit_families):
+            families = explicit_families or list(goal_entry_urls)
+        else:
+            discovery_context = await _configure_context(browser, request, allowed_origins)
+            discovery_page = await discovery_context.new_page()
+            try:
+                await _progress(progress_callback, "discovering_acquisition", 47 if request.scope == "full_site" else 20)
+                families = await _discover_families(
+                    discovery_page,
+                    request,
+                    builder,
+                    run_directory,
+                    sequence,
+                    allowed_origins,
+                    all_limitations,
+                )
+            finally:
+                await discovery_context.close()
 
         if not families:
             all_limitations.append(
@@ -1299,17 +1344,25 @@ async def perform_autonomous_analysis(
             )
         for index, family in enumerate(families):
             await _ensure_not_cancelled(cancellation_callback)
-            base_progress = 25 + int(index / max(1, len(families)) * 55)
-            context = await _configure_context(browser, request, allowed_origins)
+            progress_start = 48 if request.scope == "full_site" else 25
+            progress_span = 15 if request.scope == "full_site" else 55
+            base_progress = progress_start + int(index / max(1, len(families)) * progress_span)
+            end_progress = progress_start + int((index + 1) / max(1, len(families)) * progress_span)
+            progress_width = max(1, end_progress - base_progress)
+            session_progress = min(end_progress, base_progress + max(1, progress_width // 3))
+            exit_progress = min(end_progress, base_progress + max(1, progress_width * 2 // 3))
+            family_request = request.model_copy(update={"url": goal_entry_urls.get(family, request.url)})
+            goal_builder = StateGraphBuilder() if request.scope == "full_site" else builder
+            context = await _configure_context(browser, family_request, allowed_origins)
             page = await context.new_page()
             try:
                 await _progress(progress_callback, "discovering_acquisition", base_progress)
                 acquisition = await _execute_journey(
                     page,
-                    request,
+                    family_request,
                     family,
                     "acquisition",
-                    builder,
+                    goal_builder,
                     run_directory,
                     sequence,
                     allowed_origins,
@@ -1319,30 +1372,30 @@ async def perform_autonomous_analysis(
                 if not acquisition.primary_candidate:
                     continue
 
-                exit_ready = request.mode == "controlled" and acquisition.path.status == "completed"
+                exit_ready = family_request.mode == "controlled" and acquisition.path.status == "completed"
                 session_limitations: list[AutomationLimitation] = []
                 if not exit_ready and family in AUTH_REQUIRED_FAMILIES:
-                    await _progress(progress_callback, "establishing_session", base_progress + 8)
+                    await _progress(progress_callback, "establishing_session", session_progress)
                     exit_ready, session_limitations = await _establish_session(
-                        page, request, builder, run_directory, sequence
+                        page, family_request, goal_builder, run_directory, sequence
                     )
                     all_limitations.extend(session_limitations)
                 elif not exit_ready:
-                    navigation_failure = await _safe_goto(page, str(request.url), phase="exit")
+                    navigation_failure = await _safe_goto(page, str(family_request.url), phase="exit")
                     if navigation_failure:
                         session_limitations.append(navigation_failure)
                         all_limitations.append(navigation_failure)
                     else:
                         exit_ready = True
 
-                await _progress(progress_callback, "discovering_exit", base_progress + 15)
+                await _progress(progress_callback, "discovering_exit", exit_progress)
                 if exit_ready:
                     exit_flow = await _execute_journey(
                         page,
-                        request,
+                        family_request,
                         family,
                         "exit",
-                        builder,
+                        goal_builder,
                         run_directory,
                         sequence,
                         allowed_origins,
@@ -1357,18 +1410,18 @@ async def perform_autonomous_analysis(
                 all_limitations.extend(exit_flow.limitations)
 
                 pairing_confidence, signature = _pairing(acquisition, exit_flow, family)
-                await _progress(progress_callback, "replaying", base_progress + 25)
+                await _progress(progress_callback, "replaying", end_progress)
                 replay_attempts, replay_successes = await _measure_replay_stability(
                     browser,
-                    request,
+                    family_request,
                     allowed_origins,
                     acquisition,
                     exit_flow,
-                    builder,
+                    goal_builder,
                     run_directory,
                     sequence,
                 )
-                graph = builder.build()
+                graph = goal_builder.build()
                 # Field fills are represented as same-state graph edges.  They
                 # are not redirect loops; require a cycle to traverse at least
                 # two distinct observed states before scoring this mechanism.
@@ -1404,8 +1457,8 @@ async def perform_autonomous_analysis(
                     limitations=combined_limitations,
                     missing_credentials=(
                         family in AUTH_REQUIRED_FAMILIES
-                        and request.credentials is None
-                        and request.mode != "controlled"
+                        and family_request.credentials is None
+                        and family_request.mode != "controlled"
                     ),
                     calibrated=False,
                 )
@@ -1432,6 +1485,14 @@ async def perform_autonomous_analysis(
                     )
                 )
             finally:
+                if goal_builder is not builder:
+                    goal_graph = goal_builder.build()
+                    for node in goal_graph.nodes:
+                        builder.add_node(node)
+                    for root in goal_graph.root_state_ids:
+                        builder.add_root(root)
+                    for edge in goal_graph.edges:
+                        builder.add_edge(edge)
                 await context.close()
         await browser.close()
 
@@ -1492,6 +1553,9 @@ async def perform_autonomous_analysis(
         requires_assistance=outcome == "needs_assistance",
         behavioral_detected=behavior_detected,
         behavioral_suspicious=behavior_suspicious,
+        pages_discovered=site_audit.pages_discovered,
+        pages_scanned=site_audit.pages_scanned,
+        pages_failed=site_audit.pages_failed,
     )
     await _progress(progress_callback, "persisting", 97)
     return AutonomousFlowResult(
@@ -1504,5 +1568,6 @@ async def perform_autonomous_analysis(
         limitations=unique_limitations,
         model_status=model_status,
         frontend_behavior=frontend_behavior,
+        site_audit=site_audit,
         warnings=warnings,
     )

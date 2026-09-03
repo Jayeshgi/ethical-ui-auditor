@@ -490,6 +490,7 @@ async def analyze_frontend_behavior(
     observation_seconds: int = 30,
     analyse_models: bool = True,
     sensitive_values: tuple[str, ...] = (),
+    artifact_prefix: str = "",
 ) -> FrontendBehaviorReport:
     """Run bounded, passive behavioural experiments against browser-delivered frontend code.
 
@@ -538,7 +539,8 @@ async def analyze_frontend_behavior(
         await page.wait_for_timeout(700)
         await page.evaluate(_MUTATION_INSTALL_SCRIPT)
         initial = _sanitize_probe(await _probe(page), sensitive_values)
-        initial_path = await _safe_screenshot(page, output_directory / "behavior-initial.png", sensitive_values)
+        prefix = f"{artifact_prefix}-" if artifact_prefix else ""
+        initial_path = await _safe_screenshot(page, output_directory / f"{prefix}behavior-initial.png", sensitive_values)
         if initial_path:
             screenshots.append(initial_path)
         if response_tasks:
@@ -569,14 +571,14 @@ async def analyze_frontend_behavior(
                 except Exception:
                     dialog_episodes = []
         observed = _sanitize_probe(await _probe(page), sensitive_values)
-        observed_path = await _safe_screenshot(page, output_directory / "behavior-observed.png", sensitive_values)
+        observed_path = await _safe_screenshot(page, output_directory / f"{prefix}behavior-observed.png", sensitive_values)
         if observed_path:
             screenshots.append(observed_path)
 
         await page.reload(wait_until="domcontentloaded", timeout=30_000)
         await page.wait_for_timeout(800)
         reloaded = _sanitize_probe(await _probe(page), sensitive_values)
-        reload_path = await _safe_screenshot(page, output_directory / "behavior-reload.png", sensitive_values)
+        reload_path = await _safe_screenshot(page, output_directory / f"{prefix}behavior-reload.png", sensitive_values)
         if reload_path:
             screenshots.append(reload_path)
     except Exception as error:
@@ -592,7 +594,7 @@ async def analyze_frontend_behavior(
         await clean_page.goto(target_url, wait_until="domcontentloaded", timeout=30_000)
         await clean_page.wait_for_timeout(800)
         clean = _sanitize_probe(await _probe(clean_page), sensitive_values)
-        clean_path = await _safe_screenshot(clean_page, output_directory / "behavior-clean-session.png", sensitive_values)
+        clean_path = await _safe_screenshot(clean_page, output_directory / f"{prefix}behavior-clean-session.png", sensitive_values)
         if clean_path:
             screenshots.append(clean_path)
     except Exception as error:

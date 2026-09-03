@@ -202,6 +202,46 @@ Content-Type: application/json
 }
 ```
 
+For one consolidated same-origin website audit, set `scope` to `full_site`.
+The crawler follows HTML links only, rejects secret-bearing URLs and binary
+assets, isolates page failures, selects the strongest acquisition entry page
+for each supported goal, and gives every paired journey its own state budget.
+All journey graphs are merged into the final result.
+
+```http
+POST /api/v1/flow-runs/autonomous
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "url": "http://127.0.0.1:3000/",
+  "scope": "full_site",
+  "mode": "controlled",
+  "goal_families": ["auto"],
+  "analyse_models": true,
+  "analyse_behavior": true,
+  "policy": {
+    "max_pages": 60,
+    "crawl_depth": 4,
+    "max_states": 30,
+    "max_depth": 6,
+    "max_actions": 50,
+    "max_runtime_seconds": 600,
+    "behavior_observation_seconds": 5,
+    "max_candidates_per_state": 8,
+    "replay_attempts": 2
+  }
+}
+```
+
+The result's `site_audit` object contains discovered, scanned, failed, and
+uncovered-page counts; per-page BERT findings, YOLO cues and bounding boxes;
+fusion links; behavioral evidence; screenshots; detected goal families; and
+warnings. `coverage_complete` is true only when the same-origin queue finishes
+without page, page-limit, or depth-limit gaps. A full-site audit is deliberately
+bounded: no finite crawler can claim coverage of an unbounded or dynamically
+generated website.
+
 The returned job contains only a safe request summary. Poll it until `status` is
 `completed`, `needs_input`, `failed`, or `cancelled`.
 
@@ -210,6 +250,7 @@ The returned job contains only a safe request summary. Poll it until `status` is
 - `GET /api/v1/autonomous-flow-runs/{run_id}`
 - `GET /api/v1/autonomous-flow-runs/{run_id}/graph`
 - `GET /api/v1/autonomous-flow-runs/{run_id}/findings`
+- `GET /api/v1/autonomous-flow-runs/{run_id}/report.pdf`
 - `GET /api/v1/autonomous-flow-runs/{run_id}/screenshots/{filename}`
 - `POST /api/v1/autonomous-flow-runs/{run_id}/cancel`
 - `POST /api/v1/autonomous-flow-runs/{run_id}/input`
@@ -224,6 +265,18 @@ preselected choices, hidden rejection, repeated nagging, suspicious scarcity or
 social-proof claims, misleading action destinations, and weak price or recurring
 subscription disclosures. See `docs/dynamic-frontend-analysis.md` for the full
 evidence and confidence model.
+
+The PDF route is authenticated and owner-scoped. It renders the completed
+result on demand with bundled Chromium; incomplete jobs return HTTP 409. A
+full-site PDF includes coverage, page errors, category totals, affected URLs,
+per-page model evidence and boxes, behavioral timelines, paired journeys, graph
+totals, and limitations. The same action is available as **Download complete
+PDF report** in the result header.
+
+The comprehensive technology-store control runs separately on
+`http://127.0.0.1:3000`. Its ten paired flows, fair/manipulative variants,
+runtime cases, obstruction pages, automation limitations, and test commands are
+specified in `docs/dealcart-benchmark.md`.
 
 The autonomous request schema is checked in as
 `docs/autonomous-flow.schema.json`. The legacy reviewed-definition schema is

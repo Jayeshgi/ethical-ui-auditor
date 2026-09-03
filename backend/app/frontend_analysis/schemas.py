@@ -70,6 +70,7 @@ class FrontendArtifactSummary(BaseModel):
 
 class FrontendBehaviorFinding(BaseModel):
     finding_id: str | None = None
+    page_url: str | None = Field(default=None, max_length=2000)
     category: BehaviorCategory
     dark_pattern_category: str
     status: BehaviorStatus
